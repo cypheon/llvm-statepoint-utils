@@ -113,8 +113,10 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         // all locations must be indirects in order for it to be in the frame.
         if (! (isIndirect(base) && isIndirect(derived)) ) {
 #ifndef NDEBUG
+          if ((base->kind != 4 && base->kind != 5) || base->kind != derived->kind) {
             fprintf(stderr, "(statepoint-utils) warning: \n\t skipping a root location! \
                             base kind: %i, derived kind: %i\n", base->kind, derived->kind);
+          }
 #endif
             numActualFrameSlots--;
             continue;

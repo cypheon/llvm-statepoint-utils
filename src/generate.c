@@ -138,6 +138,7 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
 
     // once we've filtered out locations that are not within the frame, we can set this.
     frame->numSlots = numActualFrameSlots;
+    frame->numBaseSlots = numBasePtrs;
 
     // now we do the derived pointers. we already know all locations are indirects now.
     locations = start;

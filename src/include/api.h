@@ -48,6 +48,7 @@ typedef struct {
     // fact to quickly update the derived pointers by referring back to the base pointers
     // while scanning the slots.
     uint16_t numSlots;
+    uint16_t numBaseSlots;
     pointer_slot_t slots[];
 } frame_info_t;
 

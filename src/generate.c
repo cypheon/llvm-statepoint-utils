@@ -123,6 +123,7 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         }
 
         if( ! isBasePointer(base, derived)) {
+            // skip derived pointer for now, will be handled in next loop
             continue;
         }
 

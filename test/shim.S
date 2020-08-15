@@ -1,8 +1,8 @@
 #include "gsym.h"
 
 	.text
-	.globl GSYM(enterGC)
-	.extern GSYM(doGC)
-GSYM(enterGC):
+	.globl _enterGC
+	.extern _doGC
+_enterGC:
 	mov %rsp, %rdi
-	jmp GSYM(doGC)
+	jmp _doGC

@@ -11,34 +11,6 @@ bool isIndirect(value_location_t* p) {
     return p->kind == Indirect;
 }
 
-// The assumption is that the value_location given to this function
-// is known to be of the offset type, and now we need to parse the
-// offset. Offsets are given relative to a register value,
-// and since it might be either the frame pointer or stack pointer.
-//
-// This function will always return the offset relative to the stack ptr.
-int32_t convert_offset(value_location_t* p, uint64_t frameSize) {
-    assert(p->kind == Indirect && "not an indirect!");
-
-    // see the x86-64 SysV ABI documentation for the table of
-    // registers and their corresponding Dwarf reg numbers
-    switch(p->regNum) {
-        case 7: // offset is relative to stack pointer
-            assert(p->offset >= 0 && "unexpected offset!");
-            return p->offset;
-
-        case 6: // offset is relative to base pointer.
-                // NOTE haven't seen statepoints generate such offsets.
-            assert(p->offset <= 0 && "unexpected offset!");
-            return ((int32_t)frameSize) + p->offset;
-
-        default:
-            fprintf(stderr, "(statepoint-utils) error: \
-                            \n\toffset is not relative to some part of the frame!\n");
-            exit(1);
-    }
-}
-
 frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* fn) {
     uint64_t retAddr = fn->address + callsite->codeOffset;
     uint64_t frameSize = fn->stackSize;
@@ -130,8 +102,18 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         // it's a base pointer, aka base is equivalent to derived.
         // save the info.
         pointer_slot_t newSlot;
-        newSlot.kind = -1;
-        newSlot.offset = convert_offset(base, frameSize);
+        if (base->regNum == 7) {
+          // relative to stack pointer, i.e. start-of-frame
+          newSlot.kind = -1;
+        } else if (base->regNum == 6) {
+          // relative to base pointer, i.e. end-of-frame
+          newSlot.kind = -2;
+        } else {
+          fprintf(stderr, "(statepoint-utils) error: \
+              \n\toffset is not relative to some part of the frame!\n");
+          exit(1);
+        }
+        newSlot.offset = base->offset;
         *currentSlot = newSlot;
 
         // get ready for next iteration
@@ -178,8 +160,20 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
 
         // save the derived pointer's info
         pointer_slot_t newSlot;
-        newSlot.kind = baseIdx;
-        newSlot.offset = convert_offset(derived, frameSize);
+        // kind LSB: 0 -> relative to stack pointer
+        // kind LSB: 1 -> relative to base pointer
+        if (base->regNum == 7) {
+          // relative to stack pointer, i.e. start-of-frame
+          newSlot.kind = (baseIdx << 1);
+        } else if (base->regNum == 6) {
+          // relative to base pointer, i.e. end-of-frame
+          newSlot.kind = (baseIdx << 1) | 0x01;
+        } else {
+          fprintf(stderr, "(statepoint-utils) error: \
+              \n\toffset is not relative to some part of the frame!\n");
+          exit(1);
+        }
+        newSlot.offset = derived->offset;
         *currentSlot = newSlot;
 
         // new iteration

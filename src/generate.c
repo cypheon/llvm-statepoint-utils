@@ -2,6 +2,17 @@
 #include "include/api.h"
 #include "include/hash_table.h"
 
+// selected DWARF register numbers
+#ifdef __x86_64__
+#define DWARF_REGNUM_BP 6  // rbp
+#define DWARF_REGNUM_SP 7  // rsp
+#endif
+
+#ifdef __aarch64__
+#define DWARF_REGNUM_BP 29 // x29
+#define DWARF_REGNUM_SP 31 // sp
+#endif
+
 bool isBasePointer(value_location_t* first, value_location_t* second) {
     return first->kind == second->kind
            && first->offset == second->offset;
@@ -102,10 +113,10 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         // it's a base pointer, aka base is equivalent to derived.
         // save the info.
         pointer_slot_t newSlot;
-        if (base->regNum == 7) {
+        if (base->regNum == DWARF_REGNUM_SP) {
           // relative to stack pointer, i.e. start-of-frame
           newSlot.kind = -1;
-        } else if (base->regNum == 6) {
+        } else if (base->regNum == DWARF_REGNUM_BP) {
           // relative to base pointer, i.e. end-of-frame
           newSlot.kind = -2;
         } else {
@@ -162,10 +173,10 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         pointer_slot_t newSlot;
         // kind LSB: 0 -> relative to stack pointer
         // kind LSB: 1 -> relative to base pointer
-        if (base->regNum == 7) {
+        if (base->regNum == DWARF_REGNUM_SP) {
           // relative to stack pointer, i.e. start-of-frame
           newSlot.kind = (baseIdx << 1);
-        } else if (base->regNum == 6) {
+        } else if (base->regNum == DWARF_REGNUM_BP) {
           // relative to base pointer, i.e. end-of-frame
           newSlot.kind = (baseIdx << 1) | 0x01;
         } else {
